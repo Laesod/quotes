@@ -1,6 +1,7 @@
 package io.github.jordao76.quotes.domain;
 
 import javax.persistence.*;
+import javax.validation.constraints.*;
 
 @Entity
 public class Quote {
@@ -9,10 +10,10 @@ public class Quote {
   @GeneratedValue
   private Long id;
 
-  @Column(nullable = false)
+  @NotNull
   private String text;
 
-  @Column(nullable = false)
+  @NotNull
   private String author;
 
   @SuppressWarnings("unused")
@@ -23,6 +24,7 @@ public class Quote {
     this.author = author;
   }
 
+  public Long getId() { return id; }
   public String getText() { return text; }
   public String getAuthor() { return author; }
 
