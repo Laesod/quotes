@@ -1,6 +1,7 @@
 package io.github.jordao76.quotes;
 
 import static io.github.jordao76.quotes.support.QuoteMatchers.*;
+import static org.hamcrest.Matchers.*;
 import static org.springframework.http.MediaType.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -56,17 +57,96 @@ public class QuoteControllerTest {
   }
 
   @Test
-  public void putQuote() throws Exception {
+  public void getQuote_notFound() throws Exception {
+    client
+      .perform(get("/quotes/42"))
+      .andExpect(status().isNotFound());
+  }
+
+  @Test
+  public void getQuote_invalidId() throws Exception {
+    client
+      .perform(get("/quotes/blah"))
+      .andExpect(status().isBadRequest());
+  }
+
+  @Test
+  public void postQuote() throws Exception {
     String quoteText = "Quick decisions are unsafe decisions.",
       quoteAuthor = "Sophocles";
     Quote quote = new Quote(quoteText, quoteAuthor);
-    client
-      .perform(put("/quotes")
+    MvcResult result = client
+      .perform(post("/quotes")
         .contentType(APPLICATION_JSON)
         .content(serializeJson(quote)))
       .andExpect(status().isOk())
+      .andExpect(header().string("Location", both(startsWith("http")).and(containsString("/quotes/"))))
+      .andExpect(content().contentType(APPLICATION_JSON_UTF8))
+      .andExpect(contentAsQuote(matching(quoteText, quoteAuthor)))
+      .andReturn();
+    String location = result.getResponse().getHeader("Location");
+    client
+      .perform(get(location))
+      .andExpect(status().isOk())
       .andExpect(content().contentType(APPLICATION_JSON_UTF8))
       .andExpect(contentAsQuote(matching(quoteText, quoteAuthor)));
+  }
+
+  @Test
+  public void postQuote_invalidText() throws Exception {
+    String quoteText = null,
+      quoteAuthor = "Sophocles";
+    Quote quote = new Quote(quoteText, quoteAuthor);
+    client
+      .perform(post("/quotes")
+        .contentType(APPLICATION_JSON)
+        .content(serializeJson(quote)))
+      .andExpect(status().isBadRequest());
+  }
+
+  @Test
+  public void postQuote_wrongJson() throws Exception {
+    client
+      .perform(post("/quotes")
+        .contentType(APPLICATION_JSON)
+        .content("{\"citation\":\"to be or not to be\"}"))
+      .andExpect(status().isBadRequest());
+  }
+
+  @Test
+  public void postQuote_notJson() throws Exception {
+    client
+      .perform(post("/quotes")
+        .contentType(APPLICATION_XML)
+        .content("<root>not JSON</root>"))
+      .andExpect(status().isUnsupportedMediaType());
+  }
+
+  @Test
+  public void deleteSecondQuote() throws Exception {
+    client
+      .perform(get("/quotes/2"))
+      .andExpect(status().isOk());
+    client
+      .perform(delete("/quotes/2"))
+      .andExpect(status().isNoContent());
+    client
+      .perform(get("/quotes/2"))
+      .andExpect(status().isNotFound());
+  }
+
+  @Test
+  public void deleteQuote_notFound() throws Exception {
+    client
+      .perform(delete("/quotes/99999"))
+      .andExpect(status().isNotFound());
+  }
+
+  @Test
+  public void deleteQuote_invalidId() throws Exception {
+    client
+      .perform(delete("/quotes/jazzy"))
+      .andExpect(status().isBadRequest());
   }
 
 }
