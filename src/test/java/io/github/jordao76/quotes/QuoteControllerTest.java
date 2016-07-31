@@ -10,17 +10,15 @@ import static org.springframework.test.web.servlet.setup.MockMvcBuilders.*;
 import org.junit.*;
 import org.junit.runner.*;
 import org.springframework.beans.factory.annotation.*;
-import org.springframework.boot.test.*;
+import org.springframework.boot.test.context.*;
 import org.springframework.test.context.junit4.*;
-import org.springframework.test.context.web.*;
 import org.springframework.test.web.servlet.*;
 import org.springframework.web.context.*;
 
 import io.github.jordao76.quotes.domain.*;
 
-@RunWith(SpringJUnit4ClassRunner.class)
-@SpringApplicationConfiguration(classes = QuoteApplication.class)
-@WebAppConfiguration
+@RunWith(SpringRunner.class)
+@SpringBootTest
 public class QuoteControllerTest {
 
   @Autowired
@@ -33,7 +31,7 @@ public class QuoteControllerTest {
     client = webAppContextSetup(wac).build();
   }
 
-  // first quote added to the repository (@see QuoteApplication.populateRepo),
+  // first quote added to the repository (@see QuoteRepositoryInitializer),
   // should have ID = 1
   String firstQuoteText = "Any sufficiently advanced technology is indistinguishable from magic.";
   String firstQuoteAuthor = "Arthur C. Clarke";
@@ -54,6 +52,15 @@ public class QuoteControllerTest {
       .andExpect(status().isOk())
       .andExpect(content().contentType(APPLICATION_JSON_UTF8))
       .andExpect(contentAsQuote(matching(firstQuoteText, firstQuoteAuthor)));
+  }
+
+  @Test
+  public void getRandomQuote_checkResultNotNull() throws Exception {
+    client
+      .perform(get("/quotes/any"))
+      .andExpect(status().isOk())
+      .andExpect(content().contentType(APPLICATION_JSON_UTF8))
+      .andExpect(contentAsQuote(not(nullValue())));
   }
 
   @Test
@@ -79,7 +86,7 @@ public class QuoteControllerTest {
       .perform(post("/quotes")
         .contentType(APPLICATION_JSON)
         .content(serializeJson(quote)))
-      .andExpect(status().isOk())
+      .andExpect(status().isCreated())
       .andExpect(header().string("Location", both(startsWith("http")).and(containsString("/quotes/"))))
       .andExpect(content().contentType(APPLICATION_JSON_UTF8))
       .andExpect(contentAsQuote(matching(quoteText, quoteAuthor)))
