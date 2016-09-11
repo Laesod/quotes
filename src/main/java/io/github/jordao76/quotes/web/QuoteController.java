@@ -1,4 +1,4 @@
-package io.github.jordao76.quotes.controllers;
+package io.github.jordao76.quotes.web;
 
 import static org.springframework.http.HttpStatus.*;
 import static org.springframework.web.bind.annotation.RequestMethod.*;
@@ -28,8 +28,17 @@ public class QuoteController {
   }
 
   @RequestMapping(method = GET)
-  public Iterable<Quote> getQuotes() {
-    return repo.findAll();
+  public Iterable<Quote> getQuotes(
+      @RequestParam(value = "page", required = false, defaultValue = "0") int page,
+      @RequestParam(value = "size", required = false, defaultValue = "20") int size,
+      @RequestParam(value = "author", required = false) String author) {
+    PageRequest pageRequest = new PageRequest(page, size);
+    if (author != null) {
+      return repo.findByAuthor(pageRequest, author).getContent();
+    }
+    else {
+      return repo.findAll(pageRequest).getContent();
+    }
   }
 
   @RequestMapping(value = "/any", method = GET)
@@ -40,9 +49,9 @@ public class QuoteController {
   }
 
   @RequestMapping(value = "/{id}", method = GET)
-  public ResponseEntity<Quote> getQuote(@PathVariable Long id) {
+  public ResponseEntity<?> getQuote(@PathVariable Long id) {
     Quote saved = repo.findOne(id);
-    if (saved == null) return new ResponseEntity<>(NOT_FOUND);
+    if (saved == null) return new Problem(NOT_FOUND).asResponse();
     return ResponseEntity.ok().body(saved);
   }
 
@@ -53,9 +62,9 @@ public class QuoteController {
   }
 
   @RequestMapping(value = "/{id}", method = DELETE)
-  public ResponseEntity<Void> deleteQuote(@PathVariable Long id) {
+  public ResponseEntity<?> deleteQuote(@PathVariable Long id) {
     Quote saved = repo.findOne(id);
-    if (saved == null) return new ResponseEntity<>(NOT_FOUND);
+    if (saved == null) return new Problem(NOT_FOUND).asResponse();
     repo.delete(id);
     return new ResponseEntity<>(NO_CONTENT);
   }
